@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Absensi Final dengan Avatar</title>
+    <title>Sistem Absensi Final (Siap Pakai)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,15 +12,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Library Scripts -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -46,16 +37,6 @@
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
         
-        #avatar-preview {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 2px solid #e5e7eb; /* border-gray-200 */
-        }
-        .dark #avatar-preview {
-            border-color: #374151; /* dark:border-gray-600 */
-        }
         .active-nav {
             background-color: #4f46e5; /* bg-indigo-600 */
             color: white;
@@ -201,14 +182,9 @@
                             <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
                                 <h3 class="text-lg font-semibold mb-4">Generator Kartu QR Tunggal</h3>
                                 <div class="space-y-4">
-                                    <div class="flex flex-col items-center">
-                                        <label for="avatar" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Avatar Siswa (Opsional)</label>
-                                        <img id="avatar-preview" src="https://placehold.co/80x80/e2e8f0/e2e8f0?text=Avatar" alt="Pratinjau Avatar">
-                                        <input type="file" id="avatar" accept="image/png, image/jpeg" class="mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-900/50 file:text-indigo-600 dark:file:text-indigo-400 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900">
-                                    </div>
                                     <div><label for="qrNamaSiswa" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Lengkap Siswa</label><input type="text" id="qrNamaSiswa" placeholder="Contoh: Budi Santoso" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
                                     <div><label for="qrKelasSiswa" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Kelas</label><input type="text" id="qrKelasSiswa" placeholder="Contoh: XII IPA 1" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
-                                    <button id="generateQrBtn" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"><i data-feather="git-merge" class="w-4 h-4 mr-2"></i>Generate Kartu QR</button>
+                                    <button id="generateQrBtn" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"><i data-feather="grid" class="w-4 h-4 mr-2"></i>Generate Kartu QR</button>
                                 </div>
                                 <div id="qr-code-result" class="mt-6 text-center hidden"><div id="qr-card-canvas-container" class="flex justify-center qr-print-area"></div><div class="mt-4 flex gap-3 justify-center"><button id="printQrBtn" class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-500 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"><i data-feather="printer" class="w-4 h-4 mr-2"></i>Cetak</button><a id="downloadQrBtn" href="#" download="kartu-qr.jpg" class="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"><i data-feather="download" class="w-4 h-4 mr-2"></i>Unduh JPG</a></div></div>
                             </div>
@@ -221,7 +197,7 @@
                                         <span>Unggah file Excel</span>
                                         <input id="excel-file-input" name="excel-file-input" type="file" class="sr-only" accept=".xlsx, .xls">
                                     </label>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Pastikan file memiliki kolom "Nama" dan "Kelas". Avatar akan dibuat otomatis.</p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Pastikan file memiliki kolom "Nama" dan "Kelas".</p>
                                 </div>
                                 <div id="bulk-qr-controls" class="mt-4 text-center hidden">
                                     <p id="bulk-qr-status" class="text-sm text-gray-600 dark:text-gray-300 mb-4"></p>
@@ -241,9 +217,17 @@
     <!-- ===== NOTIFIKASI GLOBAL ===== -->
     <div id="notification" class="fixed top-5 right-5 z-50 hidden"><div id="notification-content" class="max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"><div class="p-4"><div class="flex items-start"><div class="flex-shrink-0"><div id="notification-icon"></div></div><div class="ml-3 w-0 flex-1 pt-0.5"><p id="notification-message" class="text-sm font-medium text-gray-900 dark:text-white"></p></div></div></div></div></div>
     
+    <!-- Library Scripts -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+
     <!-- Main App Script -->
     <script>
-        // Menunggu semua konten halaman (termasuk gambar dan skrip) dimuat sebelum menjalankan kode
         window.addEventListener('load', () => {
             // --- KONFIGURASI WAJIB (MASUKKAN DATA ANDA DI SINI) ---
             const GOOGLE_API_KEY = "AIzaSyCCjeeWBHSGGIMVmtSaUadLioZGL19f_VY";  
@@ -293,9 +277,6 @@
             const bulkQrControls = document.getElementById('bulk-qr-controls');
             const bulkQrStatus = document.getElementById('bulk-qr-status');
             const downloadAllQrZipBtn = document.getElementById('download-all-qr-zip');
-            const avatarInput = document.getElementById('avatar');
-            const avatarPreview = document.getElementById('avatar-preview');
-            let uploadedAvatar = null;
             let generatedQRCards = [];
             
             // --- PDF Export ---
@@ -314,7 +295,6 @@
             // --- FUNGSI NOTIFIKASI GLOBAL ---
             function showNotification(message, type = 'success') {
                 notificationMessage.textContent = message;
-                // Reset classes
                 notificationContent.className = 'max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
                 notificationIcon.innerHTML = '';
                 let icon;
@@ -354,7 +334,7 @@
                     const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
                     const result = await response.json();
                     showNotification(result.message, result.status);
-                    if(guruDataLoaded) { fetchDataGuru(); } // Refresh data guru jika sedang dibuka
+                    if(guruDataLoaded) { fetchDataGuru(); }
                 } catch (error) { 
                     console.error("Error submitting attendance:", error);
                     showNotification(`Gagal mengirim absensi: ${error.message}`, 'error'); 
@@ -400,7 +380,6 @@
                     return;
                 }
                 showLoadingStateGuru();
-                // Menambahkan parameter acak untuk mencegah caching
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${GOOGLE_API_KEY}&t=${new Date().getTime()}`;
                 try {
                     const response = await fetch(url);
@@ -418,7 +397,7 @@
                             let obj = {};
                             headers.forEach((header, index) => { obj[header] = row[index]; });
                             return obj;
-                        }).reverse(); // Data terbaru di atas
+                        }).reverse();
                     }
                     applyFiltersGuru();
                     updateDashboardStats();
@@ -468,7 +447,7 @@
                     todayAttendance.forEach(row => {
                         if(!row['Jam Masuk'] || !row['Jam Masuk'].includes(':')) return;
                         const timeParts = row['Jam Masuk'].split(':');
-                        if (timeParts.length !== 3) return; // Pastikan format HH:MM:SS
+                        if (timeParts.length !== 3) return;
                         totalSeconds += parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
                         validEntries++;
                     });
@@ -523,7 +502,7 @@
             }
 
             // --- LOGIKA GENERATOR KARTU QR ---
-            async function generateQrCard(nama, kelas, avatarFile) {
+            async function generateQrCard(nama, kelas) {
                 const dataString = `${nama}|${kelas}`;
                 
                 const cardCanvas = document.createElement('canvas');
@@ -550,48 +529,12 @@
 
                 // Gambar QR Code ke canvas kartu
                 const qrCanvas = document.createElement('canvas');
-                await QRCode.toCanvas(qrCanvas, dataString, { width: 180, margin: 1, errorCorrectionLevel: 'H' });
-                ctx.drawImage(qrCanvas, (cardCanvas.width - 180) / 2, 90);
+                const qrSize = 220;
+                await QRCode.toCanvas(qrCanvas, dataString, { width: qrSize, margin: 1, errorCorrectionLevel: 'H' });
+                const qrX = (cardCanvas.width - qrSize) / 2;
+                const qrY = 95; // Posisi Y disesuaikan agar di tengah
+                ctx.drawImage(qrCanvas, qrX, qrY);
                 
-                // Gambar Avatar
-                const avatar = new Image();
-                avatar.crossOrigin = "Anonymous"; // Diperlukan untuk memuat gambar dari domain lain (dicebear)
-                
-                let avatarLoadPromise;
-                if (avatarFile) {
-                    avatar.src = URL.createObjectURL(avatarFile);
-                    avatarLoadPromise = new Promise(resolve => avatar.onload = resolve);
-                } else {
-                    // Menggunakan DiceBear API untuk avatar default
-                    const svgResponse = await fetch(`https://api.dicebear.com/8.x/adventurer-neutral/svg?seed=${encodeURIComponent(nama)}`);
-                    const svgText = await svgResponse.text();
-                    const svgBlob = new Blob([svgText], {type: 'image/svg+xml;charset=utf-8'});
-                    avatar.src = URL.createObjectURL(svgBlob);
-                    avatarLoadPromise = new Promise(resolve => avatar.onload = resolve);
-                }
-                
-                await avatarLoadPromise;
-                
-                const avatarSize = 50;
-                const x = (cardCanvas.width - avatarSize) / 2;
-                const y = 90 + (180 - avatarSize) / 2;
-
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(x + avatarSize / 2, y + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
-                ctx.closePath();
-                ctx.clip();
-
-                ctx.drawImage(avatar, x, y, avatarSize, avatarSize);
-                
-                ctx.beginPath();
-                ctx.arc(x + avatarSize / 2, y + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = ctx.fillStyle; // Warna latar belakang QR code
-                ctx.stroke();
-                ctx.closePath();
-                ctx.restore();
-
                 return cardCanvas;
             }
 
@@ -600,7 +543,7 @@
                 const kelas = qrKelasSiswaInput.value.trim();
                 if (!nama || !kelas) { showNotification("Nama dan Kelas wajib diisi.", 'error'); return; }
                 
-                const cardCanvas = await generateQrCard(nama, kelas, uploadedAvatar);
+                const cardCanvas = await generateQrCard(nama, kelas);
                 qrCardCanvasContainer.innerHTML = '';
                 qrCardCanvasContainer.appendChild(cardCanvas);
                 
@@ -641,10 +584,9 @@
                             const kelas = row.Kelas ? row.Kelas.toString().trim() : '';
                             if (!nama || !kelas) continue;
 
-                            const cardCanvas = await generateQrCard(nama, kelas, null); // null for avatar to use DiceBear
+                            const cardCanvas = await generateQrCard(nama, kelas);
                             generatedQRCards.push({ name: nama, canvas: cardCanvas });
                             
-                            // Clone canvas untuk pratinjau agar tidak mengganggu yang asli
                             const previewCanvas = document.createElement('canvas');
                             previewCanvas.width = cardCanvas.width;
                             previewCanvas.height = cardCanvas.height;
@@ -718,7 +660,6 @@
                 const rows = table.querySelectorAll('tbody tr');
                 
                 rows.forEach(row => {
-                    // Jangan masukkan baris "tidak ada data"
                     if(row.querySelectorAll('td').length > 1) {
                         const rowData = [];
                         row.querySelectorAll('td').forEach(cell => {
@@ -743,7 +684,7 @@
                     body: body,
                     startY: 28,
                     theme: 'grid',
-                    headStyles: { fillColor: [74, 85, 104] }, // slate-600
+                    headStyles: { fillColor: [74, 85, 104] },
                 });
 
                 doc.save(`laporan-absensi-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -772,18 +713,10 @@
             downloadAllQrZipBtn.addEventListener('click', handleDownloadZip);
             exportPdfBtn.addEventListener('click', handleExportPdf);
             
-            avatarInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    avatarPreview.src = URL.createObjectURL(file);
-                    uploadedAvatar = file;
-                }
-            });
-
             // --- INISIALISASI ---
             feather.replace({ 'stroke-width': 1.5, 'width': '1.25rem', 'height': '1.25rem' });
             setupDarkMode();
-            showView('portal-view'); // Mulai dari halaman portal
+            showView('portal-view');
         });
     </script>
 </body>
