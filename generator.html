@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalis QR Studio (2D Preview & Responsive)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <!-- Libraries: QR Code Styling, Excel, ZIP -->
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            overflow: hidden;
+        }
+        .app-container {
+            height: 100vh;
+            padding: 1rem;
+        }
+        /* Desktop Layout */
+        @media (min-width: 1024px) {
+            .app-layout {
+                display: grid;
+                grid-template-columns: 1fr 420px;
+                gap: 1.5rem;
+                height: 100%;
+            }
+        }
+        /* Mobile Layout */
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+        }
+        .panel {
+            background-color: #ffffff;
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border: 1px solid #e2e8f0; /* slate-200 */
+            display: flex;
+            flex-direction: column;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #111827;
+            box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+        }
+        .btn-primary {
+            background: #111827;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover:not(:disabled) { background: #1f2937; }
+        .tab-button {
+            flex: 1;
+            padding: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .tab-button.active {
+            color: #111827;
+            border-bottom-color: #111827;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-layout">
+            <!-- Left Column: Main Workspace -->
+            <main class="space-y-6 flex flex-col">
+                <!-- Workflow Panel -->
+                <div class="panel">
+                    <div class="p-6 border-b border-gray-200">
+                        <h1 class="text-xl font-extrabold text-gray-900">Mode Pembuatan</h1>
+                    </div>
+                    <!-- Mode Tabs -->
+                    <div class="flex border-b border-gray-200">
+                        <button id="tab-single" class="tab-button active">Mode Tunggal</button>
+                        <button id="tab-batch" class="tab-button">Mode Massal</button>
+                    </div>
+                    <div class="p-6">
+                        <!-- Single Mode Panel -->
+                        <div id="single-mode-panel">
+                            <label class="font-bold text-gray-800 mb-3 block">Isi Data Tunggal</label>
+                            <div class="space-y-3">
+                                <input type="text" id="single-nama" class="form-input" placeholder="Nama Siswa">
+                                <input type="text" id="single-kelas" class="form-input" placeholder="Kelas / ID">
+                            </div>
+                        </div>
+                        <!-- Batch Mode Panel -->
+                        <div id="batch-mode-panel" class="hidden">
+                            <label class="font-bold text-gray-800 mb-3 block">Unggah File Excel</label>
+                            <p class="text-sm text-gray-500 mb-4">File harus memiliki kolom **Nama** dan **Kelas**.</p>
+                            <input type="file" id="excelFile" class="hidden" accept=".xlsx, .xls">
+                            <button id="upload-button" class="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 border border-gray-300 transition-all">
+                                <i data-feather="upload-cloud"></i>
+                                <span>Pilih File</span>
+                            </button>
+                            <p id="fileName" class="text-center text-sm text-gray-500 mt-3"></p>
+                        </div>
+                    </div>
+                    <div class="p-6 border-t border-gray-200">
+                        <button id="generate-btn" class="w-full py-3 rounded-lg font-bold text-lg btn-primary flex items-center justify-center gap-3">
+                            <i data-feather="zap" class="w-5 h-5"></i>
+                            <span>Generate & Preview</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Preview Panel -->
+                <div class="panel flex-1 bg-slate-100 relative p-4 lg:p-6">
+                    <div id="preview-container" class="w-full h-full flex flex-col items-center justify-center">
+                        <!-- 2D Preview -->
+                        <div id="2d-preview-container" class="w-full h-full flex items-center justify-center">
+                             <!-- QR Code will be rendered here -->
+                        </div>
+                        <!-- Batch Gallery Preview -->
+                        <div id="batch-gallery-container" class="hidden w-full h-full flex-col">
+                            <p id="batch-info" class="text-center font-semibold text-slate-600 mb-4"></p>
+                            <div id="batch-grid" class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto no-scrollbar p-1">
+                                <!-- Batch QR codes will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Column: Design Studio -->
+            <aside class="panel">
+                <div class="p-6 border-b border-gray-200">
+                    <h1 class="text-xl font-extrabold text-gray-900">Studio Desain</h1>
+                    <p class="text-sm text-gray-500">Desain ini berlaku untuk semua mode.</p>
+                </div>
+                <div class="p-6 flex-1 overflow-y-auto no-scrollbar">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="font-semibold text-gray-700 mb-2 block">Warna Gradien</label>
+                            <div class="flex items-center gap-4">
+                                <input type="color" id="color1" value="#0f172a" class="w-full h-10 rounded-md cursor-pointer border-none">
+                                <input type="color" id="color2" value="#4338ca" class="w-full h-10 rounded-md cursor-pointer border-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="dotsType" class="font-semibold text-gray-700 mb-2 block">Gaya Titik</label>
+                            <select id="dotsType" class="form-input">
+                                <option value="square">Kotak</option>
+                                <option value="dots">Titik</option>
+                                <option value="rounded">Membulat</option>
+                                <option value="classy-rounded">Klasik Bulat</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="logoUrl" class="font-semibold text-gray-700 mb-2 block">Logo (URL)</label>
+                            <input type="text" id="logoUrl" placeholder="Opsional" class="form-input text-sm">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-200">
+                    <button id="download-btn" class="w-full py-3 rounded-lg font-bold btn-primary flex items-center justify-center gap-3 disabled:opacity-50" disabled>
+                         <i data-feather="download" class="w-5 h-5"></i>
+                        <span>Unduh Hasil</span>
+                    </button>
+                </div>
+            </aside>
+        </div>
+    </div>
+    
+    <script>
+        window.onload = () => {
+            feather.replace();
+            const app = new FinalisQRApp();
+        };
+
+        class FinalisQRApp {
+            constructor() {
+                this.mode = 'single';
+                this.qrCodeInstance = null;
+                this.excelData = [];
+                this.designOptions = {
+                    width: 300, height: 300, margin: 10,
+                    qrOptions: { errorCorrectionLevel: 'H' },
+                    dotsOptions: { type: 'square', gradient: { type: 'linear', colorStops: [{ offset: 0, color: '#0f172a' }, { offset: 1, color: '#4338ca' }] } },
+                    imageOptions: { crossOrigin: "anonymous", margin: 5 }
+                };
+
+                this.initDOM();
+                this.initListeners();
+                this.updatePreviewVisibility();
+            }
+
+            initDOM() {
+                // Tabs & Panels
+                this.tabSingle = document.getElementById('tab-single');
+                this.tabBatch = document.getElementById('tab-batch');
+                this.singleModePanel = document.getElementById('single-mode-panel');
+                this.batchModePanel = document.getElementById('batch-mode-panel');
+                
+                // Inputs
+                this.singleNamaInput = document.getElementById('single-nama');
+                this.singleKelasInput = document.getElementById('single-kelas');
+                this.uploadButton = document.getElementById('upload-button');
+                this.excelFileInput = document.getElementById('excelFile');
+                this.fileNameEl = document.getElementById('fileName');
+                this.generateBtn = document.getElementById('generate-btn');
+
+                // Preview
+                this.preview2DContainer = document.getElementById('2d-preview-container');
+                this.batchGalleryContainer = document.getElementById('batch-gallery-container');
+                this.batchGrid = document.getElementById('batch-grid');
+                this.batchInfo = document.getElementById('batch-info');
+
+                // Design & Download
+                this.color1Input = document.getElementById('color1');
+                this.color2Input = document.getElementById('color2');
+                this.dotsTypeSelect = document.getElementById('dotsType');
+                this.logoUrlInput = document.getElementById('logoUrl');
+                this.downloadBtn = document.getElementById('download-btn');
+            }
+
+            initListeners() {
+                this.tabSingle.addEventListener('click', () => this.switchMode('single'));
+                this.tabBatch.addEventListener('click', () => this.switchMode('batch'));
+                this.generateBtn.addEventListener('click', () => this.handleGenerate());
+                this.uploadButton.addEventListener('click', () => this.excelFileInput.click());
+                this.excelFileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
+                
+                [this.color1Input, this.color2Input, this.dotsTypeSelect, this.logoUrlInput].forEach(el => {
+                    el.addEventListener('input', this.debounce(() => this.updateDesign()));
+                });
+                
+                this.downloadBtn.addEventListener('click', () => this.handleDownload());
+            }
+
+            switchMode(newMode) {
+                this.mode = newMode;
+                this.updatePreviewVisibility();
+            }
+
+            updatePreviewVisibility() {
+                if (this.mode === 'single') {
+                    this.tabSingle.classList.add('active');
+                    this.tabBatch.classList.remove('active');
+                    this.singleModePanel.classList.remove('hidden');
+                    this.batchModePanel.classList.add('hidden');
+                    this.preview2DContainer.classList.remove('hidden');
+                    this.batchGalleryContainer.classList.add('hidden');
+                } else {
+                    this.tabSingle.classList.remove('active');
+                    this.tabBatch.classList.add('active');
+                    this.singleModePanel.classList.add('hidden');
+                    this.batchModePanel.classList.remove('hidden');
+                    this.preview2DContainer.classList.add('hidden');
+                    this.batchGalleryContainer.classList.remove('hidden');
+                }
+            }
+
+            handleGenerate() {
+                if (this.mode === 'single') {
+                    this.generateSingleQRCode();
+                } else {
+                    this.renderBatchGallery();
+                }
+            }
+
+            generateSingleQRCode() {
+                const nama = this.singleNamaInput.value.trim();
+                const kelas = this.singleKelasInput.value.trim();
+                if (!nama || !kelas) {
+                    alert("Harap isi Nama dan Kelas/ID.");
+                    return;
+                }
+                const dataString = `Nama: ${nama}\nKelas/ID: ${kelas}`;
+                this.designOptions.data = dataString;
+                
+                this.preview2DContainer.innerHTML = ''; // Clear previous
+                this.qrCodeInstance = new QRCodeStyling(this.designOptions);
+                this.qrCodeInstance.append(this.preview2DContainer);
+                this.downloadBtn.disabled = false;
+            }
+
+            handleFileSelect(file) {
+                if (!file) return;
+                this.fileNameEl.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        if (jsonData.length > 0 && 'Nama' in jsonData[0] && 'Kelas' in jsonData[0]) {
+                            this.excelData = jsonData;
+                            this.downloadBtn.disabled = false;
+                            alert(`${this.excelData.length} data berhasil dimuat. Klik "Generate & Preview" untuk melihat hasilnya.`);
+                        } else {
+                           alert("Format Excel tidak sesuai. Pastikan ada kolom 'Nama' dan 'Kelas'.");
+                           this.excelData = [];
+                           this.downloadBtn.disabled = true;
+                        }
+                    } catch (err) {
+                        alert('Gagal memproses file Excel.');
+                        console.error(err);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            renderBatchGallery() {
+                if (this.excelData.length === 0) {
+                    alert("Unggah file Excel dan klik 'Generate' terlebih dahulu.");
+                    return;
+                }
+                this.batchGrid.innerHTML = '';
+                this.batchInfo.textContent = `Menampilkan ${this.excelData.length} QR Code`;
+                this.excelData.forEach(row => {
+                    const container = document.createElement('div');
+                    container.className = 'bg-slate-200 p-2 rounded-lg flex flex-col items-center';
+                    const qrDiv = document.createElement('div');
+                    container.appendChild(qrDiv);
+                    const nameP = document.createElement('p');
+                    nameP.className = 'text-xs font-semibold mt-2 text-center truncate w-full text-slate-700';
+                    nameP.textContent = row.Nama;
+                    container.appendChild(nameP);
+                    this.batchGrid.appendChild(container);
+
+                    const batchQrOptions = { ...this.designOptions };
+                    // Adjust size for gallery view
+                    batchQrOptions.width = 120;
+                    batchQrOptions.height = 120;
+                    batchQrOptions.margin = 5;
+                    batchQrOptions.data = `Nama: ${row.Nama}\nKelas: ${row.Kelas}`;
+                    
+                    new QRCodeStyling(batchQrOptions).append(qrDiv);
+                });
+            }
+
+            updateDesign() {
+                this.designOptions.dotsOptions.type = this.dotsTypeSelect.value;
+                this.designOptions.dotsOptions.gradient.colorStops = [
+                    { offset: 0, color: this.color1Input.value },
+                    { offset: 1, color: this.color2Input.value }
+                ];
+                this.designOptions.image = this.logoUrlInput.value.trim();
+                
+                if (this.qrCodeInstance && this.mode === 'single') {
+                    this.qrCodeInstance.update(this.designOptions);
+                }
+                 if (this.mode === 'batch' && this.excelData.length > 0) {
+                    this.renderBatchGallery();
+                }
+            }
+
+            handleDownload() {
+                if (this.mode === 'single') {
+                    if (this.qrCodeInstance) {
+                        this.qrCodeInstance.download({ name: "single-qr", extension: "png" });
+                    }
+                } else {
+                    this.downloadBatchAsZip();
+                }
+            }
+            
+            async downloadBatchAsZip() {
+                if (this.excelData.length === 0) return;
+                const zip = new JSZip();
+                this.downloadBtn.innerHTML = `<i data-feather="loader" class="w-5 h-5 animate-spin"></i> Memproses...`;
+                feather.replace();
+                this.downloadBtn.disabled = true;
+
+                for (const row of this.excelData) {
+                    const qrOptions = { ...this.designOptions };
+                    qrOptions.data = `Nama: ${row.Nama}\nKelas: ${row.Kelas}`;
+                    const qr = new QRCodeStyling(qrOptions);
+                    const blob = await qr.getRawData('png');
+                    const fileName = `QR_${row.Nama.replace(/ /g, '_')}.png`;
+                    zip.file(fileName, blob);
+                }
+
+                zip.generateAsync({ type: 'blob' }).then(content => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = 'Kumpulan_QR_Code.zip';
+                    link.click();
+                    this.downloadBtn.innerHTML = `<i data-feather="download" class="w-5 h-5"></i> Unduh Hasil`;
+                    this.downloadBtn.disabled = false;
+                    feather.replace();
+                });
+            }
+
+            debounce(func, delay = 300) {
+                let timeout;
+                return (...args) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            }
+        }
+    </script>
+</body>
+</html>
