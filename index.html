@@ -35,8 +35,6 @@
         .dark ::placeholder { color: #6b7280; }
         
         /* Animasi */
-        @keyframes fadeInOut { 0%, 100% { opacity: 0; transform: translateY(-20px); } 10%, 90% { opacity: 1; transform: translateY(0); } }
-        .notification-animation { animation: fadeInOut 5s ease-in-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-up { animation: fadeInUp 0.5s ease-in-out forwards; }
         
@@ -111,6 +109,15 @@
         .tab-button-generator.active {
             color: #111827;
             border-bottom-color: #111827;
+        }
+
+        /* MODIFIKASI: Gaya untuk Modal Notifikasi di Tengah */
+        #notification-modal.visible #modal-backdrop {
+            opacity: 1;
+        }
+        #notification-modal.visible #modal-content {
+            transform: scale(1);
+            opacity: 1;
         }
     </style>
     <script>
@@ -297,7 +304,7 @@
                                         <div id="preview-container" class="w-full h-full flex flex-col items-center justify-center">
                                             <!-- 2D Preview -->
                                             <div id="2d-preview-container" class="w-full h-full flex items-center justify-center">
-                                                 <!-- QR Code will be rendered here -->
+                                                <!-- QR Code will be rendered here -->
                                             </div>
                                             <!-- Batch Gallery Preview -->
                                             <div id="batch-gallery-container" class="hidden w-full h-full flex-col">
@@ -309,7 +316,7 @@
                                         </div>
                                     </div>
                                 </main>
-                    
+                        
                                 <!-- Right Column: Design Studio -->
                                 <aside class="panel-generator">
                                     <div class="p-6 border-b border-gray-200">
@@ -342,8 +349,8 @@
                                     </div>
                                     <div class="p-6 border-t border-gray-200">
                                         <button id="download-btn" class="w-full py-3 rounded-lg font-bold btn-primary-generator flex items-center justify-center gap-3 disabled:opacity-50" disabled>
-                                             <i data-feather="download" class="w-5 h-5"></i>
-                                            <span>Unduh Hasil</span>
+                                           <i data-feather="download" class="w-5 h-5"></i>
+                                           <span>Unduh Hasil</span>
                                         </button>
                                     </div>
                                 </aside>
@@ -356,8 +363,21 @@
         </div>
     </div>
 
-    <!-- ===== NOTIFIKASI GLOBAL ===== -->
-    <div id="notification" class="fixed top-5 right-5 z-50 hidden"><div id="notification-content" class="max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"><div class="p-4"><div class="flex items-start"><div class="flex-shrink-0"><div id="notification-icon"></div></div><div class="ml-3 w-0 flex-1 pt-0.5"><p id="notification-message" class="text-sm font-medium text-gray-900 dark:text-white"></p></div></div></div></div></div>
+    <!-- MODIFIKASI: NOTIFIKASI MODAL DI TENGAH (MENGGANTIKAN NOTIFIKASI LAMA) -->
+    <div id="notification-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden">
+        <!-- Backdrop -->
+        <div id="modal-backdrop" class="absolute inset-0 bg-black bg-opacity-60 transition-opacity duration-300 ease-in-out opacity-0"></div>
+        
+        <!-- Modal Content -->
+        <div id="modal-content" class="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 text-center transform transition-all duration-300 ease-in-out scale-95 opacity-0">
+            <div id="modal-icon-container" class="w-16 h-16 mx-auto mb-5 flex items-center justify-center rounded-full">
+                <!-- Icon akan di-render oleh JavaScript -->
+            </div>
+            <h3 id="modal-title" class="text-lg font-bold text-gray-900 dark:text-white"></h3>
+            <p id="modal-message" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
+            <button id="modal-close-btn" class="mt-6 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">Tutup</button>
+        </div>
+    </div>
     
     <!-- Main App Script (Digabungkan) -->
     <script>
@@ -601,11 +621,14 @@
             // --- ELEMEN VIEW ---
             const allViews = Array.from(document.querySelectorAll('#portal-view, #siswa-view, #guru-view'));
 
-            // --- ELEMEN UMUM ---
-            const notification = document.getElementById('notification');
-            const notificationContent = document.getElementById('notification-content');
-            const notificationIcon = document.getElementById('notification-icon');
-            const notificationMessage = document.getElementById('notification-message');
+            // --- MODIFIKASI: ELEMEN MODAL NOTIFIKASI ---
+            const notificationModal = document.getElementById('notification-modal');
+            const modalBackdrop = document.getElementById('modal-backdrop');
+            const modalContent = document.getElementById('modal-content');
+            const modalIconContainer = document.getElementById('modal-icon-container');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
 
             // --- ELEMEN SISWA ---
             const scannerContainer = document.getElementById('scanner-container');
@@ -646,50 +669,85 @@
                 }
             }
 
-            // --- FUNGSI NOTIFIKASI GLOBAL ---
-            function showNotification(message, type = 'success') {
-                notificationMessage.textContent = message;
-                notificationContent.className = 'max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
-                notificationIcon.innerHTML = '';
-                let icon;
-                if (type === 'success') {
-                    icon = feather.icons['check-circle'].toSvg({ class: 'h-6 w-6 text-green-500' });
-                } else if (type === 'error') {
-                    icon = feather.icons['alert-triangle'].toSvg({ class: 'h-6 w-6 text-red-500' });
-                } else { // info
-                    icon = feather.icons['info'].toSvg({ class: 'h-6 w-6 text-blue-500' });
+            // --- MODIFIKASI: FUNGSI NOTIFIKASI MODAL ---
+            function showModalNotification(title, message, type = 'success') {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+
+                modalIconContainer.innerHTML = ''; // Hapus ikon sebelumnya
+                let iconSvg, iconBgColor;
+
+                switch(type) {
+                    case 'error':
+                        iconSvg = feather.icons['alert-triangle'].toSvg({ class: 'w-8 h-8 text-red-500' });
+                        iconBgColor = 'bg-red-100 dark:bg-red-900/50';
+                        break;
+                    case 'info':
+                        iconSvg = feather.icons['info'].toSvg({ class: 'w-8 h-8 text-blue-500' });
+                        iconBgColor = 'bg-blue-100 dark:bg-blue-900/50';
+                        break;
+                    case 'loading':
+                        iconSvg = `<svg class="animate-spin h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                        iconBgColor = 'bg-transparent'; // Tanpa background untuk spinner
+                        modalCloseBtn.classList.add('hidden'); // Sembunyikan tombol saat loading
+                        break;
+                    case 'success':
+                    default:
+                        iconSvg = feather.icons['check-circle'].toSvg({ class: 'w-8 h-8 text-green-500' });
+                        iconBgColor = 'bg-green-100 dark:bg-green-900/50';
+                        break;
                 }
-                notificationIcon.innerHTML = icon;
-                notification.classList.remove('hidden');
-                notification.classList.add('notification-animation');
-                setTimeout(() => { 
-                    notification.classList.add('hidden'); 
-                    notification.classList.remove('notification-animation'); 
-                }, 4900);
+                
+                if (type !== 'loading') {
+                    modalCloseBtn.classList.remove('hidden');
+                }
+
+                modalIconContainer.innerHTML = iconSvg;
+                modalIconContainer.className = `w-16 h-16 mx-auto mb-5 flex items-center justify-center rounded-full ${iconBgColor}`;
+                
+                notificationModal.classList.remove('hidden');
+                setTimeout(() => {
+                    notificationModal.classList.add('visible');
+                }, 10); // Timeout pendek untuk memastikan transisi berjalan
+            }
+
+            function hideModalNotification() {
+                notificationModal.classList.remove('visible');
+                setTimeout(() => {
+                    notificationModal.classList.add('hidden');
+                }, 300); // Sesuaikan dengan durasi transisi di CSS
             }
 
             // --- LOGIKA HALAMAN SISWA ---
             async function onScanSuccess(decodedText) {
                 stopScanner();
-                // PENTING: Format pemisah diubah menjadi '|'
                 const parts = decodedText.split('|');
                 if (parts.length !== 2 || !parts[0] || !parts[1]) {
-                    showNotification('Format QR Code tidak valid.', 'error');
+                    showModalNotification('Gagal Membaca QR', 'Format QR Code yang Anda pindai tidak valid atau rusak.', 'error');
                     return;
                 }
                 const [nama, kelas] = parts;
-                showNotification(`Memproses absensi untuk ${nama}...`, 'info');
+                
+                showModalNotification('Memproses...', `Mengirim data absensi untuk ${nama}. Harap tunggu.`, 'loading');
+
                 const formData = new FormData();
                 formData.append('nama', nama.trim());
                 formData.append('kelas', kelas.trim());
+
                 try {
                     const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
                     const result = await response.json();
-                    showNotification(result.message, result.status);
+                    
+                    showModalNotification(
+                        result.status === 'success' ? 'Absensi Berhasil' : 'Terjadi Kesalahan',
+                        result.message,
+                        result.status
+                    );
+
                     if(guruDataLoaded) { fetchDataGuru(); }
                 } catch (error) { 
                     console.error("Error submitting attendance:", error);
-                    showNotification(`Gagal mengirim absensi: ${error.message}`, 'error'); 
+                    showModalNotification('Koneksi Gagal', `Gagal mengirim data absensi: ${error.message}. Periksa koneksi internet Anda.`, 'error'); 
                 }
             }
             function startScanner() {
@@ -698,7 +756,7 @@
                 if (!html5QrCode) { html5QrCode = new Html5Qrcode("qr-reader"); }
                 html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess)
                     .catch(err => { 
-                        showNotification("Tidak dapat mengakses kamera. Pastikan izin telah diberikan.", 'error'); 
+                        showModalNotification("Kamera Error", "Tidak dapat mengakses kamera. Pastikan izin telah diberikan.", 'error'); 
                         stopScanner(); 
                     });
             }
@@ -728,7 +786,6 @@
                     }
                 });
 
-                // Inisialisasi aplikasi generator jika belum ada
                 if (sectionId === 'dashboard-generator' && !qrGeneratorApp) {
                     qrGeneratorApp = new FinalisQRApp();
                 }
@@ -882,7 +939,8 @@
                 });
 
                 if (body.length === 0) {
-                    showNotification("Tidak ada data untuk diekspor.", "info");
+                    // Gunakan modal baru untuk notifikasi ini juga
+                    showModalNotification("Info", "Tidak ada data untuk diekspor.", "info");
                     return;
                 }
 
@@ -908,6 +966,10 @@
             document.querySelectorAll('.back-to-portal').forEach(btn => btn.addEventListener('click', () => showView('portal-view')));
             document.getElementById('scanBtn').addEventListener('click', startScanner);
             document.getElementById('closeScannerBtn').addEventListener('click', stopScanner);
+            
+            // MODIFIKASI: Event listener untuk modal baru
+            modalCloseBtn.addEventListener('click', hideModalNotification);
+            modalBackdrop.addEventListener('click', hideModalNotification);
             
             filterNama.addEventListener('keyup', applyFiltersGuru);
             filterKelas.addEventListener('keyup', applyFiltersGuru);
