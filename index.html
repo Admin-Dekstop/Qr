@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi V2</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Library Scripts -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        /* Gaya Umum */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .transition-all-ease { transition: all 0.3s ease-in-out; }
+        
+        /* Scrollbar Kustom */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* Gaya Navigasi Aktif */
+        .active-nav {
+            background-color: #4f46e5; /* bg-indigo-600 */
+            color: white;
+        }
+        
+        /* Animasi */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease-in-out forwards; }
+        .fade-in-up { animation: fadeInUp 0.5s ease-in-out forwards; }
+
+        /* Gaya Modal Notifikasi */
+        #notification-modal.visible #modal-backdrop { opacity: 1; }
+        #notification-modal.visible #modal-content { transform: translateY(0) scale(1); opacity: 1; }
+    </style>
+    <script>
+        // Konfigurasi Tailwind
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+
+    <!-- ===== HALAMAN PORTAL (VIEW AWAL) ===== -->
+    <div id="portal-view" class="fade-in">
+        <div class="min-h-screen flex flex-col items-center justify-center p-4">
+            <div class="absolute top-4 right-4">
+                <button id="darkModeTogglePortal" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none transition-all-ease">
+                    <i data-feather="sun" class="sun-icon"></i><i data-feather="moon" class="moon-icon hidden"></i>
+                </button>
+            </div>
+            <div class="max-w-lg w-full text-center">
+                <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shadow-sm">
+                    <i data-feather="users" class="w-8 h-8"></i>
+                </div>
+                <h1 class="mt-6 text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Sistem Absensi V2</h1>
+                <p class="mt-3 text-base md:text-lg text-slate-600 dark:text-slate-400">Pilih peran Anda untuk melanjutkan.</p>
+            </div>
+            <div class="mt-10 flex flex-col sm:flex-row gap-4 w-full max-w-md">
+                <button id="show-guru-view" class="group flex-1 inline-flex items-center justify-center px-6 py-4 border border-transparent text-base font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:ring-offset-slate-900 transition-all-ease transform hover:-translate-y-1 shadow-lg shadow-indigo-500/20">
+                    <i data-feather="bar-chart-2" class="mr-3 h-6 w-6 transition-all-ease group-hover:rotate-12"></i>Dasbor Guru
+                </button>
+                <button id="show-siswa-view" class="group flex-1 inline-flex items-center justify-center px-6 py-4 border border-slate-300 dark:border-slate-600 text-base font-semibold rounded-xl text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:ring-offset-slate-900 transition-all-ease transform hover:-translate-y-1 shadow-lg shadow-slate-500/10">
+                    <i data-feather="camera" class="mr-3 h-6 w-6 transition-all-ease group-hover:rotate-12"></i>Absen Siswa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== HALAMAN SISWA (VIEW TERSEMBUNYI) ===== -->
+    <div id="siswa-view" class="hidden">
+        <div class="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center text-white p-4">
+            <div id="scanner-ui" class="w-full h-full flex flex-col items-center justify-center">
+                <div class="text-center mb-4">
+                    <h1 class="text-2xl font-bold">Pindai QR Code Anda</h1>
+                    <p class="text-slate-400">Posisikan QR Code di dalam kotak pemindai.</p>
+                </div>
+                <div id="qr-reader" class="w-full max-w-sm aspect-square rounded-2xl overflow-hidden border-4 border-dashed border-slate-700 bg-slate-800"></div>
+                <button class="back-to-portal mt-6 flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-all-ease">
+                    <i data-feather="arrow-left" class="w-4 h-4"></i> Kembali ke Portal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== HALAMAN GURU (VIEW TERSEMBUNYI) ===== -->
+    <div id="guru-view" class="hidden">
+        <div class="flex h-screen bg-slate-100 dark:bg-slate-900">
+            <!-- Sidebar -->
+            <aside class="w-64 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex-col hidden md:flex">
+                <div class="h-16 flex items-center justify-center px-4 border-b border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center gap-3">
+                        <div class="h-9 w-9 flex items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400">
+                           <i data-feather="bar-chart-2" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-bold text-lg">Dasbor Guru</span>
+                    </div>
+                </div>
+                <nav class="flex-1 px-4 py-4 space-y-1">
+                    <a href="#" data-section="dashboard-home" class="guru-nav-item active-nav flex items-center px-4 py-2.5 text-sm font-medium rounded-lg">
+                        <i data-feather="home" class="mr-3 h-5 w-5"></i> Dasbor
+                    </a>
+                    <a href="#" data-section="dashboard-data" class="guru-nav-item flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <i data-feather="database" class="mr-3 h-5 w-5"></i> Data Absensi
+                    </a>
+                    <a href="#" data-section="dashboard-generator" class="guru-nav-item flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <i data-feather="grid" class="mr-3 h-5 w-5"></i> Generator QR
+                    </a>
+                </nav>
+                <div class="px-4 py-4 border-t border-slate-200 dark:border-slate-700">
+                    <button class="back-to-portal w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <i data-feather="arrow-left-circle" class="mr-3 h-5 w-5"></i> Kembali ke Portal
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 flex flex-col overflow-hidden">
+                <header class="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6">
+                    <h1 id="header-title" class="text-xl font-semibold text-slate-900 dark:text-white">Dasbor</h1>
+                    <div class="flex items-center gap-4">
+                        <button id="darkModeToggle" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none transition-all-ease">
+                            <i data-feather="sun" class="sun-icon"></i><i data-feather="moon" class="moon-icon hidden"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                    <!-- Section: Dasbor Home -->
+                    <div id="dashboard-home" class="guru-section space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 flex items-center gap-5 fade-in-up" style="animation-delay: 100ms;"><div class="h-14 w-14 flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400"><i data-feather="users" class="w-7 h-7"></i></div><div><p class="text-sm text-slate-500 dark:text-slate-400">Hadir Hari Ini</p><p id="stat-hadir-hari-ini" class="text-3xl font-bold">0</p></div></div>
+                            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 flex items-center gap-5 fade-in-up" style="animation-delay: 200ms;"><div class="h-14 w-14 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"><i data-feather="archive" class="w-7 h-7"></i></div><div><p class="text-sm text-slate-500 dark:text-slate-400">Total Rekap Absensi</p><p id="stat-total-rekap" class="text-3xl font-bold">0</p></div></div>
+                            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 flex items-center gap-5 fade-in-up" style="animation-delay: 300ms;"><div class="h-14 w-14 flex items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"><i data-feather="clock" class="w-7 h-7"></i></div><div><p class="text-sm text-slate-500 dark:text-slate-400">Rata-rata Jam Masuk</p><p id="stat-avg-jam-masuk" class="text-3xl font-bold">--:--</p></div></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 fade-in-up" style="animation-delay: 400ms;">
+                            <h3 class="font-semibold text-lg mb-4">5 Absensi Terbaru</h3>
+                            <div class="overflow-x-auto"><table class="min-w-full"><tbody id="recent-attendance-table"></tbody></table></div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Data Absensi -->
+                    <div id="dashboard-data" class="guru-section hidden space-y-6">
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                                <div><label for="filterNama" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nama Siswa</label><input type="text" id="filterNama" placeholder="Cari nama..." class="block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                                <div><label for="filterKelas" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Kelas</label><input type="text" id="filterKelas" placeholder="Cari kelas..." class="block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                                <div><label for="filterTanggal" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tanggal</label><input type="date" id="filterTanggal" class="block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                                <div class="flex gap-3">
+                                    <button id="refreshBtn" class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-slate-300 dark:border-slate-500 shadow-sm text-sm font-medium rounded-md text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"><i data-feather="refresh-cw" class="w-4 h-4"></i></button>
+                                    <button id="exportPdfBtn" class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"><i data-feather="file-text" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table id="attendance-main-table" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                                    <thead class="bg-slate-50 dark:bg-slate-700/50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Nama</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Kelas</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Tanggal</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Jam Masuk</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attendanceTableBody" class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                                        <!-- Data akan dirender di sini -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section: Generator QR (Sama seperti sebelumnya, hanya diintegrasikan) -->
+                    <div id="dashboard-generator" class="guru-section hidden h-full">
+                        <!-- Konten generator QR akan disisipkan di sini oleh JS jika diperlukan -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ===== MODAL NOTIFIKASI ===== -->
+    <div id="notification-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden transition-opacity duration-300">
+        <div id="modal-backdrop" class="absolute inset-0 bg-black/60 transition-opacity duration-300 ease-in-out opacity-0"></div>
+        <div id="modal-content" class="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 text-center transform transition-all duration-300 ease-out -translate-y-4 scale-95 opacity-0">
+            <div id="modal-icon-container" class="w-16 h-16 mx-auto mb-5 flex items-center justify-center rounded-full"></div>
+            <h3 id="modal-title" class="text-lg font-bold text-slate-900 dark:text-white"></h3>
+            <p id="modal-message" class="mt-2 text-sm text-slate-500 dark:text-slate-400"></p>
+            <button id="modal-close-btn" class="mt-6 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">Tutup</button>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ======================================================================
+        // --- KONFIGURASI WAJIB (MASUKKAN DATA ANDA DI SINI) ---
+        // ======================================================================
+        const GOOGLE_API_KEY = "AIzaSyCCjeeWBHSGGIMVmtSaUadLioZGL19f_VY"; // GANTI DENGAN API KEY ANDA
+        const SPREADSHEET_ID = "1LyTFQ1efDLAd3iuAVjz5PMkE_PX9ooZlal1_nSfDY5k"; // GANTI DENGAN ID SPREADSHEET ANDA
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbynlny7N68N8djtOWxheNXGtPkNV9oETUxs6NGy0X-WgQBDBnV9-pRzMc1hcFkImA/exec"; // GANTI DENGAN URL WEB APP ANDA
+        const SHEET_NAME = "Sheet1"; // Nama sheet di spreadsheet Anda
+
+        // --- ELEMEN DOM ---
+        const allViews = document.querySelectorAll('#portal-view, #siswa-view, #guru-view');
+        const notificationModal = document.getElementById('notification-modal');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalContent = document.getElementById('modal-content');
+        const modalIconContainer = document.getElementById('modal-icon-container');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const qrReaderDiv = document.getElementById('qr-reader');
+        const guruNavItems = document.querySelectorAll('.guru-nav-item');
+        const guruSections = document.querySelectorAll('.guru-section');
+        const headerTitle = document.getElementById('header-title');
+        const tableBody = document.getElementById('attendanceTableBody');
+        const filterNama = document.getElementById('filterNama');
+        const filterKelas = document.getElementById('filterKelas');
+        const filterTanggal = document.getElementById('filterTanggal');
+        const darkModeToggles = document.querySelectorAll('#darkModeToggle, #darkModeTogglePortal');
+        const statHadirHariIni = document.getElementById('stat-hadir-hari-ini');
+        const statTotalRekap = document.getElementById('stat-total-rekap');
+        const statAvgJamMasuk = document.getElementById('stat-avg-jam-masuk');
+        const recentAttendanceTable = document.getElementById('recent-attendance-table');
+
+        // --- STATE APLIKASI ---
+        let html5QrCode;
+        let allData = [];
+        let guruDataLoaded = false;
+        let currentModalCloseCallback = null;
+
+        // ======================================================================
+        // --- MANAJEMEN TAMPILAN (VIEW) ---
+        // ======================================================================
+        function showView(viewId) {
+            allViews.forEach(view => view.classList.add('hidden'));
+            const currentView = document.getElementById(viewId);
+            if (currentView) {
+                currentView.classList.remove('hidden');
+                currentView.classList.add('fade-in');
+            }
+
+            if (viewId === 'siswa-view') {
+                startScanner();
+            } else {
+                stopScanner();
+            }
+
+            if (viewId === 'guru-view' && !guruDataLoaded) {
+                fetchDataGuru();
+                guruDataLoaded = true;
+            }
+        }
+
+        // ======================================================================
+        // --- SISTEM NOTIFIKASI MODAL ---
+        // ======================================================================
+        function showModalNotification(title, message, type = 'success', onClose = null) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            currentModalCloseCallback = onClose;
+
+            modalIconContainer.innerHTML = '';
+            let iconSvg, iconBgColor;
+
+            switch(type) {
+                case 'error':
+                    iconSvg = feather.icons['alert-triangle'].toSvg({ class: 'w-8 h-8 text-red-500' });
+                    iconBgColor = 'bg-red-100 dark:bg-red-900/50';
+                    break;
+                case 'info':
+                    iconSvg = feather.icons['info'].toSvg({ class: 'w-8 h-8 text-blue-500' });
+                    iconBgColor = 'bg-blue-100 dark:bg-blue-900/50';
+                    break;
+                case 'loading':
+                    iconSvg = `<svg class="animate-spin h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                    iconBgColor = 'bg-transparent';
+                    modalCloseBtn.classList.add('hidden');
+                    break;
+                case 'success':
+                default:
+                    iconSvg = feather.icons['check-circle'].toSvg({ class: 'w-8 h-8 text-green-500' });
+                    iconBgColor = 'bg-green-100 dark:bg-green-900/50';
+                    break;
+            }
+            
+            if (type !== 'loading') {
+                modalCloseBtn.classList.remove('hidden');
+            }
+
+            modalIconContainer.innerHTML = iconSvg;
+            modalIconContainer.className = `w-16 h-16 mx-auto mb-5 flex items-center justify-center rounded-full ${iconBgColor}`;
+            
+            notificationModal.classList.remove('hidden');
+            setTimeout(() => notificationModal.classList.add('visible'), 10);
+        }
+
+        function hideModalNotification() {
+            notificationModal.classList.remove('visible');
+            setTimeout(() => {
+                notificationModal.classList.add('hidden');
+                if (currentModalCloseCallback) {
+                    currentModalCloseCallback();
+                    currentModalCloseCallback = null;
+                }
+            }, 300);
+        }
+
+        // ======================================================================
+        // --- LOGIKA PEMINDAI QR (HALAMAN SISWA) ---
+        // ======================================================================
+        async function onScanSuccess(decodedText) {
+            stopScanner();
+            const parts = decodedText.split('|');
+            if (parts.length !== 2 || !parts[0] || !parts[1]) {
+                showModalNotification('Gagal', 'Format QR Code tidak valid.', 'error', startScanner);
+                return;
+            }
+            const [nama, kelas] = parts;
+            
+            showModalNotification('Memproses...', `Mengirim data untuk ${nama}...`, 'loading');
+
+            const formData = new FormData();
+            formData.append('nama', nama.trim());
+            formData.append('kelas', kelas.trim());
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                showModalNotification(
+                    result.status === 'success' ? 'Absensi Berhasil' : 'Gagal',
+                    result.message,
+                    result.status
+                );
+
+                if (guruDataLoaded) { fetchDataGuru(); }
+                
+                // PERBAIKAN: Otomatis tutup notifikasi dan mulai ulang kamera
+                setTimeout(() => {
+                    hideModalNotification();
+                    startScanner();
+                }, 2000); // Tunggu 2 detik sebelum memulai ulang
+
+            } catch (error) {
+                console.error("Error submitting attendance:", error);
+                showModalNotification('Koneksi Gagal', 'Gagal mengirim data. Periksa koneksi internet Anda.', 'error', startScanner);
+            }
+        }
+
+        function startScanner() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("qr-reader");
+            }
+            // Cek jika sedang tidak memindai untuk menghindari error
+            if (html5QrCode && !html5QrCode.isScanning) {
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        const qrboxSize = Math.floor(minEdge * 0.8);
+                        return { width: qrboxSize, height: qrboxSize };
+                    }},
+                    onScanSuccess,
+                    (errorMessage) => { /* Abaikan error 'QR code not found' */ }
+                ).catch(err => {
+                    console.error("Gagal memulai kamera:", err);
+                    showModalNotification("Kamera Error", "Tidak dapat mengakses kamera. Pastikan izin telah diberikan.", 'error');
+                });
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.error("Gagal menghentikan scanner:", err));
+            }
+        }
+
+        // ======================================================================
+        // --- LOGIKA DASBOR GURU ---
+        // ======================================================================
+        function showGuruSection(sectionId) {
+            guruSections.forEach(section => section.classList.add('hidden'));
+            const currentSection = document.getElementById(sectionId);
+            if (currentSection) {
+                currentSection.classList.remove('hidden');
+            }
+            
+            guruNavItems.forEach(item => {
+                item.classList.toggle('active-nav', item.dataset.section === sectionId);
+                item.classList.toggle('text-slate-600', item.dataset.section !== sectionId);
+                item.classList.toggle('dark:text-slate-300', item.dataset.section !== sectionId);
+                item.classList.toggle('hover:bg-slate-100', item.dataset.section !== sectionId);
+                item.classList.toggle('dark:hover:bg-slate-700', item.dataset.section !== sectionId);
+                
+                if (item.dataset.section === sectionId) {
+                    headerTitle.textContent = item.textContent.trim();
+                }
+            });
+
+            if (sectionId === 'dashboard-generator' && !document.getElementById('qr-generator-app-container')) {
+                loadQrGenerator();
+            }
+        }
+
+        async function fetchDataGuru() {
+            showLoadingStateGuru();
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!A:E?key=${GOOGLE_API_KEY}&t=${new Date().getTime()}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || `HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                if (!data.values || data.values.length < 1) {
+                    allData = [];
+                } else {
+                    const headers = data.values[0];
+                    const rows = data.values.slice(1);
+                    allData = rows.map(row => {
+                        let obj = {};
+                        headers.forEach((header, index) => { obj[header] = row[index]; });
+                        return obj;
+                    }).reverse(); // Data terbaru di atas
+                }
+                applyFiltersGuru();
+                updateDashboardStats(); // PERBAIKAN: Panggil setelah data dimuat
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                showErrorStateGuru(`Gagal memuat data: ${error.message}.`);
+            }
+        }
+
+        // PERBAIKAN: Logika render tabel disederhanakan
+        function renderTableGuru(dataToRender) {
+            tableBody.innerHTML = '';
+            if (dataToRender.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-slate-500 dark:text-slate-400">Tidak ada data absensi.</td></tr>`;
+                return;
+            }
+            dataToRender.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors';
+                const tanggalFormatted = row.Tanggal ? new Date(row.Tanggal).toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' }) : '-';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">${row.Nama || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">${row.Kelas || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">${tanggalFormatted}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">${row['Jam Masuk'] || '-'}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // PERBAIKAN: Logika statistik diperbaiki dan dioptimalkan
+        function updateDashboardStats() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set ke awal hari
+
+            const todayAttendance = allData.filter(row => {
+                if (!row.Tanggal) return false;
+                const rowDate = new Date(row.Tanggal);
+                rowDate.setHours(0, 0, 0, 0);
+                return rowDate.getTime() === today.getTime();
+            });
+            
+            statHadirHariIni.textContent = todayAttendance.length;
+            statTotalRekap.textContent = allData.length;
+
+            // Update tabel absensi terbaru
+            recentAttendanceTable.innerHTML = '';
+            if (allData.length > 0) {
+                allData.slice(0, 5).forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-200 dark:border-slate-700 last:border-0';
+                    tr.innerHTML = `
+                        <td class="py-3 pr-3 text-sm font-semibold text-slate-800 dark:text-slate-200">${row.Nama}</td>
+                        <td class="py-3 px-3 text-sm text-slate-500 dark:text-slate-400">${row.Kelas}</td>
+                        <td class="py-3 pl-3 text-sm text-slate-500 dark:text-slate-400 text-right">${row['Jam Masuk'] || ''}</td>
+                    `;
+                    recentAttendanceTable.appendChild(tr);
+                });
+            } else {
+                recentAttendanceTable.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-400">Belum ada data.</td></tr>`;
+            }
+
+            // Hitung rata-rata jam masuk
+            if (todayAttendance.length > 0) {
+                let totalSeconds = 0;
+                let validEntries = 0;
+                todayAttendance.forEach(row => {
+                    if (row['Jam Masuk'] && row['Jam Masuk'].includes(':')) {
+                        const timeParts = row['Jam Masuk'].split(':');
+                        if (timeParts.length === 3) {
+                            totalSeconds += parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
+                            validEntries++;
+                        }
+                    }
+                });
+                
+                if (validEntries > 0) {
+                    const avgSeconds = Math.floor(totalSeconds / validEntries);
+                    const hours = String(Math.floor(avgSeconds / 3600)).padStart(2, '0');
+                    const minutes = String(Math.floor((avgSeconds % 3600) / 60)).padStart(2, '0');
+                    statAvgJamMasuk.textContent = `${hours}:${minutes}`;
+                } else {
+                    statAvgJamMasuk.textContent = '--:--';
+                }
+            } else {
+                statAvgJamMasuk.textContent = '--:--';
+            }
+        }
+
+        function applyFiltersGuru() {
+            const nama = filterNama.value.toLowerCase();
+            const kelas = filterKelas.value.toLowerCase();
+            const tanggal = filterTanggal.value;
+            const filteredData = allData.filter(row => {
+                const rowDate = row.Tanggal ? new Date(row.Tanggal) : null;
+                const formattedRowDate = rowDate ? rowDate.toISOString().split('T')[0] : '';
+                
+                return (row.Nama ? row.Nama.toLowerCase().includes(nama) : true) &&
+                       (row.Kelas ? row.Kelas.toLowerCase().includes(kelas) : true) &&
+                       (!tanggal || formattedRowDate === tanggal);
+            });
+            renderTableGuru(filteredData);
+        }
+
+        function showLoadingStateGuru() {
+            const loadingHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-slate-500 dark:text-slate-400"><div class="flex justify-center items-center space-x-2"><svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Memuat data...</span></div></td></tr>`;
+            tableBody.innerHTML = loadingHTML;
+            recentAttendanceTable.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-400">Memuat...</td></tr>`;
+        }
+        function showErrorStateGuru(message) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-red-500">${message}</td></tr>`;
+        }
+        
+        // PERBAIKAN: Ekspor PDF hanya kolom yang ditampilkan
+        function handleExportPdf() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const head = [['Nama', 'Kelas', 'Tanggal', 'Jam Masuk']];
+            const body = [];
+            const rows = document.querySelectorAll('#attendanceTableBody tr');
+            
+            rows.forEach(row => {
+                if (row.querySelectorAll('td').length > 1) { // Pastikan bukan baris 'tidak ada data'
+                    const rowData = [];
+                    row.querySelectorAll('td').forEach(cell => rowData.push(cell.innerText));
+                    body.push(rowData);
+                }
+            });
+
+            if (body.length === 0) {
+                showModalNotification("Info", "Tidak ada data untuk diekspor.", "info");
+                return;
+            }
+
+            doc.text("Laporan Data Absensi", 14, 16);
+            doc.setFontSize(10);
+            doc.text(`Diekspor pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, 14, 22);
+
+            doc.autoTable({
+                head: head,
+                body: body,
+                startY: 28,
+                theme: 'grid',
+                headStyles: { fillColor: [79, 70, 229] }, // Warna indigo
+            });
+
+            doc.save(`laporan-absensi-${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+        
+        // ======================================================================
+        // --- DARK MODE & INISIALISASI ---
+        // ======================================================================
+        function setupDarkMode() {
+            const sunIcons = document.querySelectorAll('.sun-icon');
+            const moonIcons = document.querySelectorAll('.moon-icon');
+            if (localStorage.getItem('darkMode') === 'true' || (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                moonIcons.forEach(i => i.classList.remove('hidden'));
+                sunIcons.forEach(i => i.classList.add('hidden'));
+            } else {
+                document.documentElement.classList.remove('dark');
+                sunIcons.forEach(i => i.classList.remove('hidden'));
+                moonIcons.forEach(i => i.classList.add('hidden'));
+            }
+        }
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
+            document.querySelectorAll('.sun-icon').forEach(i => i.classList.toggle('hidden'));
+            document.querySelectorAll('.moon-icon').forEach(i => i.classList.toggle('hidden'));
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('show-siswa-view').addEventListener('click', () => showView('siswa-view'));
+        document.getElementById('show-guru-view').addEventListener('click', () => showView('guru-view'));
+        document.querySelectorAll('.back-to-portal').forEach(btn => btn.addEventListener('click', () => showView('portal-view')));
+        modalCloseBtn.addEventListener('click', hideModalNotification);
+        modalBackdrop.addEventListener('click', hideModalNotification);
+        filterNama.addEventListener('keyup', applyFiltersGuru);
+        filterKelas.addEventListener('keyup', applyFiltersGuru);
+        filterTanggal.addEventListener('change', applyFiltersGuru);
+        document.getElementById('refreshBtn').addEventListener('click', fetchDataGuru);
+        document.getElementById('exportPdfBtn').addEventListener('click', handleExportPdf);
+        darkModeToggles.forEach(toggle => toggle.addEventListener('click', toggleDarkMode));
+        guruNavItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                showGuruSection(e.currentTarget.dataset.section);
+            });
+        });
+
+        // --- INISIALISASI APLIKASI ---
+        feather.replace({ 'stroke-width': 1.75 });
+        setupDarkMode();
+        showView('portal-view');
+        
+        // ======================================================================
+        // --- KODE GENERATOR QR (DIMUAT SECARA DINAMIS) ---
+        // ======================================================================
+        function loadQrGenerator() {
+            const generatorContainer = document.getElementById('dashboard-generator');
+            // Cek lagi untuk menghindari duplikasi
+            if (document.getElementById('qr-generator-app-container')) return;
+            
+            generatorContainer.innerHTML = `
+                <div id="qr-generator-app-container" class="h-full">
+                    <style>
+                        .panel-generator { background-color: #ffffff; border-radius: 0.75rem; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07); border: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+                        .dark .panel-generator { background-color: #1f2937; border-color: #374151; }
+                        .form-input-generator { width: 100%; padding: 0.65rem 1rem; background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 0.5rem; transition: all 0.2s ease; }
+                        .dark .form-input-generator { background-color: #374151; border-color: #4b5563; color: #e5e7eb; }
+                        .form-input-generator:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3); }
+                        .btn-primary-generator { background: #1f2937; color: white; transition: all 0.2s ease; }
+                        .dark .btn-primary-generator { background: #e5e7eb; color: #1f2937; }
+                        .btn-primary-generator:hover:not(:disabled) { background: #374151; }
+                        .dark .btn-primary-generator:hover:not(:disabled) { background: #f9fafb; }
+                        .tab-button-generator { flex: 1; padding: 0.75rem; font-weight: 600; color: #6b7280; border-bottom: 3px solid transparent; transition: all 0.2s ease; }
+                        .dark .tab-button-generator { color: #9ca3af; }
+                        .tab-button-generator.active { color: #111827; border-bottom-color: #4f46e5; }
+                        .dark .tab-button-generator.active { color: #f9fafb; }
+                    </style>
+                    <div class="grid lg:grid-cols-3 gap-6 h-full">
+                        <div class="lg:col-span-1 flex flex-col gap-6">
+                            <div class="panel-generator">
+                                <div class="p-5 border-b border-slate-200 dark:border-slate-700"><h2 class="text-lg font-bold">Mode Pembuatan</h2></div>
+                                <div class="flex border-b border-slate-200 dark:border-slate-700"><button id="tab-single" class="tab-button-generator active">Tunggal</button><button id="tab-batch" class="tab-button-generator">Massal</button></div>
+                                <div class="p-5">
+                                    <div id="single-mode-panel">
+                                        <div class="space-y-3"><input type="text" id="single-nama" class="form-input-generator" placeholder="Nama Siswa"><input type="text" id="single-kelas" class="form-input-generator" placeholder="Kelas / ID"></div>
+                                    </div>
+                                    <div id="batch-mode-panel" class="hidden">
+                                        <p class="text-sm text-slate-500 mb-3">File Excel harus punya kolom <strong>Nama</strong> dan <strong>Kelas</strong>.</p>
+                                        <input type="file" id="excelFile" class="hidden" accept=".xlsx, .xls">
+                                        <button id="upload-button" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600 transition-all"><i data-feather="upload-cloud" class="w-5 h-5"></i><span>Pilih File</span></button>
+                                        <p id="fileName" class="text-center text-xs text-slate-500 mt-2 truncate"></p>
+                                    </div>
+                                </div>
+                                <div class="p-5 mt-auto border-t border-slate-200 dark:border-slate-700">
+                                    <button id="generate-btn" class="w-full py-3 rounded-lg font-bold btn-primary-generator flex items-center justify-center gap-2"><i data-feather="zap" class="w-5 h-5"></i><span>Generate</span></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-2 flex flex-col gap-6">
+                            <div id="preview-panel" class="panel-generator flex-1 bg-slate-100 dark:bg-slate-900/50 relative p-4 lg:p-6">
+                                <div id="preview-container" class="w-full h-full flex flex-col items-center justify-center">
+                                    <div id="2d-preview-container" class="w-full h-full flex items-center justify-center"></div>
+                                    <div id="batch-gallery-container" class="hidden w-full h-full flex-col">
+                                        <p id="batch-info" class="text-center font-semibold text-slate-600 dark:text-slate-300 mb-4"></p>
+                                        <div id="batch-grid" class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto p-1"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-generator">
+                                <div class="p-5 border-b border-slate-200 dark:border-slate-700"><h2 class="text-lg font-bold">Opsi Desain</h2></div>
+                                <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div><label class="font-semibold text-sm text-slate-700 dark:text-slate-300 mb-2 block">Gradien</label><div class="flex items-center gap-2"><input type="color" id="color1" value="#0f172a" class="w-full h-9 rounded-md cursor-pointer border-none"><input type="color" id="color2" value="#4338ca" class="w-full h-9 rounded-md cursor-pointer border-none"></div></div>
+                                    <div><label for="dotsType" class="font-semibold text-sm text-slate-700 dark:text-slate-300 mb-2 block">Gaya Titik</label><select id="dotsType" class="form-input-generator"><option value="square">Kotak</option><option value="dots">Titik</option><option value="rounded">Membulat</option><option value="classy-rounded">Klasik Bulat</option></select></div>
+                                    <div><label for="logoUrl" class="font-semibold text-sm text-slate-700 dark:text-slate-300 mb-2 block">Logo (URL)</label><input type="text" id="logoUrl" placeholder="Opsional" class="form-input-generator text-sm"></div>
+                                </div>
+                                <div class="p-5 mt-auto border-t border-slate-200 dark:border-slate-700">
+                                    <button id="download-btn" class="w-full py-3 rounded-lg font-bold btn-primary-generator flex items-center justify-center gap-2 disabled:opacity-50" disabled><i data-feather="download" class="w-5 h-5"></i><span>Unduh Hasil</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            // Re-run feather icons replacement
+            feather.replace({ 'stroke-width': 1.75 });
+            // Initialize the QR Generator App
+            new FinalisQRApp();
+        }
+        
+        class FinalisQRApp {
+            constructor() {
+                this.mode = 'single';
+                this.qrCodeInstance = null;
+                this.excelData = [];
+                this.designOptions = {
+                    width: 300, height: 300, margin: 10,
+                    qrOptions: { errorCorrectionLevel: 'H' },
+                    dotsOptions: { type: 'square', gradient: { type: 'linear', colorStops: [{ offset: 0, color: '#0f172a' }, { offset: 1, color: '#4338ca' }] } },
+                    imageOptions: { crossOrigin: "anonymous", margin: 5 }
+                };
+                this.initDOM();
+                this.initListeners();
+                this.updatePreviewVisibility();
+            }
+            initDOM() {
+                this.tabSingle = document.getElementById('tab-single');
+                this.tabBatch = document.getElementById('tab-batch');
+                this.singleModePanel = document.getElementById('single-mode-panel');
+                this.batchModePanel = document.getElementById('batch-mode-panel');
+                this.singleNamaInput = document.getElementById('single-nama');
+                this.singleKelasInput = document.getElementById('single-kelas');
+                this.uploadButton = document.getElementById('upload-button');
+                this.excelFileInput = document.getElementById('excelFile');
+                this.fileNameEl = document.getElementById('fileName');
+                this.generateBtn = document.getElementById('generate-btn');
+                this.preview2DContainer = document.getElementById('2d-preview-container');
+                this.batchGalleryContainer = document.getElementById('batch-gallery-container');
+                this.batchGrid = document.getElementById('batch-grid');
+                this.batchInfo = document.getElementById('batch-info');
+                this.color1Input = document.getElementById('color1');
+                this.color2Input = document.getElementById('color2');
+                this.dotsTypeSelect = document.getElementById('dotsType');
+                this.logoUrlInput = document.getElementById('logoUrl');
+                this.downloadBtn = document.getElementById('download-btn');
+            }
+            initListeners() {
+                this.tabSingle.addEventListener('click', () => this.switchMode('single'));
+                this.tabBatch.addEventListener('click', () => this.switchMode('batch'));
+                this.generateBtn.addEventListener('click', () => this.handleGenerate());
+                this.uploadButton.addEventListener('click', () => this.excelFileInput.click());
+                this.excelFileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
+                [this.color1Input, this.color2Input, this.dotsTypeSelect, this.logoUrlInput].forEach(el => {
+                    el.addEventListener('input', this.debounce(() => this.updateDesign()));
+                });
+                this.downloadBtn.addEventListener('click', () => this.handleDownload());
+            }
+            switchMode(newMode) {
+                this.mode = newMode;
+                this.updatePreviewVisibility();
+            }
+            updatePreviewVisibility() {
+                this.tabSingle.classList.toggle('active', this.mode === 'single');
+                this.tabBatch.classList.toggle('active', this.mode === 'batch');
+                this.singleModePanel.classList.toggle('hidden', this.mode !== 'single');
+                this.batchModePanel.classList.toggle('hidden', this.mode !== 'batch');
+                this.preview2DContainer.classList.toggle('hidden', this.mode !== 'single');
+                this.batchGalleryContainer.classList.toggle('hidden', this.mode !== 'batch');
+            }
+            handleGenerate() {
+                if (this.mode === 'single') this.generateSingleQRCode();
+                else this.renderBatchGallery();
+            }
+            generateSingleQRCode() {
+                const nama = this.singleNamaInput.value.trim();
+                const kelas = this.singleKelasInput.value.trim();
+                if (!nama || !kelas) {
+                    showModalNotification("Input Kurang", "Harap isi Nama dan Kelas/ID.", "error");
+                    return;
+                }
+                this.designOptions.data = `${nama}|${kelas}`;
+                this.preview2DContainer.innerHTML = '';
+                this.qrCodeInstance = new QRCodeStyling(this.designOptions);
+                this.qrCodeInstance.append(this.preview2DContainer);
+                this.downloadBtn.disabled = false;
+            }
+            handleFileSelect(file) {
+                if (!file) return;
+                this.fileNameEl.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        if (jsonData.length > 0 && 'Nama' in jsonData[0] && 'Kelas' in jsonData[0]) {
+                            this.excelData = jsonData;
+                            this.downloadBtn.disabled = false;
+                            showModalNotification("Berhasil", `${this.excelData.length} data dimuat. Klik "Generate" untuk melihat preview.`, "success");
+                        } else {
+                            showModalNotification("Format Salah", "Pastikan file Excel memiliki kolom 'Nama' dan 'Kelas'.", "error");
+                            this.excelData = [];
+                            this.downloadBtn.disabled = true;
+                        }
+                    } catch (err) {
+                        showModalNotification("Error", "Gagal memproses file Excel.", "error");
+                        console.error(err);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            renderBatchGallery() {
+                if (this.excelData.length === 0) {
+                    showModalNotification("Info", "Unggah file Excel dan klik 'Generate' terlebih dahulu.", "info");
+                    return;
+                }
+                this.batchGrid.innerHTML = '';
+                this.batchInfo.textContent = `Menampilkan ${this.excelData.length} QR Code`;
+                this.excelData.forEach(row => {
+                    const container = document.createElement('div');
+                    container.className = 'bg-slate-200 dark:bg-slate-700 p-2 rounded-lg flex flex-col items-center text-center';
+                    const qrDiv = document.createElement('div');
+                    container.appendChild(qrDiv);
+                    const nameP = document.createElement('p');
+                    nameP.className = 'text-xs font-semibold mt-2 truncate w-full text-slate-700 dark:text-slate-200';
+                    nameP.textContent = row.Nama;
+                    container.appendChild(nameP);
+                    this.batchGrid.appendChild(container);
+
+                    const batchQrOptions = { ...this.designOptions, width: 120, height: 120, margin: 5, data: `${row.Nama}|${row.Kelas}` };
+                    new QRCodeStyling(batchQrOptions).append(qrDiv);
+                });
+            }
+            updateDesign() {
+                this.designOptions.dotsOptions.type = this.dotsTypeSelect.value;
+                this.designOptions.dotsOptions.gradient.colorStops = [{ offset: 0, color: this.color1Input.value }, { offset: 1, color: this.color2Input.value }];
+                this.designOptions.image = this.logoUrlInput.value.trim();
+                if (this.qrCodeInstance && this.mode === 'single') {
+                    this.qrCodeInstance.update(this.designOptions);
+                }
+                if (this.mode === 'batch' && this.excelData.length > 0) {
+                    this.renderBatchGallery();
+                }
+            }
+            async handleDownload() {
+                if (this.mode === 'single') {
+                    if (this.qrCodeInstance) this.qrCodeInstance.download({ name: "qr-code-tunggal", extension: "png" });
+                } else {
+                    await this.downloadBatchAsZip();
+                }
+            }
+            async downloadBatchAsZip() {
+                if (this.excelData.length === 0) return;
+                const zip = new JSZip();
+                this.downloadBtn.innerHTML = `<i data-feather="loader" class="w-5 h-5 animate-spin"></i> Memproses...`;
+                feather.replace();
+                this.downloadBtn.disabled = true;
+
+                for (const row of this.excelData) {
+                    const qrOptions = { ...this.designOptions, data: `${row.Nama}|${row.Kelas}` };
+                    const qr = new QRCodeStyling(qrOptions);
+                    const blob = await qr.getRawData('png');
+                    zip.file(`QR_${row.Nama.replace(/ /g, '_')}.png`, blob);
+                }
+
+                zip.generateAsync({ type: 'blob' }).then(content => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = 'Kumpulan_QR_Code.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    this.downloadBtn.innerHTML = `<i data-feather="download" class="w-5 h-5"></i> Unduh Hasil`;
+                    this.downloadBtn.disabled = false;
+                    feather.replace();
+                });
+            }
+            debounce(func, delay = 300) {
+                let timeout;
+                return (...args) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            }
+        }
+    });
+    </script>
+</body>
+</html>
